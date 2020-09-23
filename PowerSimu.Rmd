@@ -1,0 +1,68 @@
+---
+title: "Power Analysis"
+author: "Andrea"
+date: "9/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Installing the simulation package and loading data
+```{r cars}
+library(lme4)
+library(tidyverse)
+library(simr)
+
+df <- read.csv("portfolio1_data.csv")
+#kunne ikke få read_csv til at virke
+
+#subsetter en dataframe som kun har de variabler vi predicter ud fra, så vi kan fjerne NA-værdier kun for dem. Simulationen vil ikke køre pga. manglende værdier, men hvis vi fjerner dem fra hele datasættet mister vi stort set alle observationer (vi går fra sådan 360 til 60 agtigt). 
+
+dfsub <- df %>% dplyr::select(ID, types_CHI, VISIT, Diagnosis) %>%  na.omit()
+```
+
+Power calculations
+```{r}
+#the model of choice from Byurakns video
+m <- lme4::lmer(types_CHI ~ VISIT + Diagnosis + (1 + VISIT|ID), dfsub, REML = F)
+powerV = powerSim (m, simr::fixed("VISIT"), nsim = 50)
+powerV
+```
+100% power
+
+```{r}
+powerD = powerSim(m, simr::fixed("Diagnosis"), nsim = 50)
+powerD
+```
+Only 16% power oh no
+
+PowerCruve for VISIT
+```{r}
+fixef(m)["VISIT"] <- 10
+powerCurveV <- powerCurve(m, fixed("VISIT"), along = "ID", nsim = 50)
+powerCurveV
+#Need 17 to get 80% power
+```
+
+PowerCurve for Diagnosis
+```{r}
+fixef(m)["DiagnosisTD"] <- 30
+powerCurveD <- powerCurve(m, fixed("Diagnosis"), along = "ID", nsim = 50)
+powerCurveD
+```
+plots for both
+```{r}
+plot(powerCurveV)
+plot(powerCurveD)
+
+
+```
+
